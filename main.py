@@ -106,7 +106,11 @@ def get_monthly_returns(df):
     return df
 
 def calc_RFB(df):
+    """
+    This function calculates the Rolling Factor Betas
 
+    Return: pandas.Dataframe
+    """
     factor_data = web.DataReader('F-F_Research_Data_5_Factors_2x3',
                                  'famafrench',
                                  start = '2010')[0].drop('RF', axis = 1)
@@ -146,6 +150,10 @@ def calc_RFB(df):
     return df
 
 def get_clusters(df):
+    """
+    This function coputes the K-Means clusters from the dataframe. 
+    HYP_K: this is the hyperparameter k, for which we found k = 4 to be the best fit using the elbow
+    """
 
     HYP_K = 4      #The hyperparameter k that I  have chosen is 4.
 
