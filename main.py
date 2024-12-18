@@ -80,7 +80,7 @@ def get_liquid_stocks(df):
 
     df['dollar_volume'] = (df.loc[:,'dollar_volume'].unstack('ticker').rolling(5*12, min_periods=12).mean().stack())
 
-    df['dollar_vol_rank'] = (data.groupby('date')['dollar_volume'].rank(ascending=False))
+    df['dollar_vol_rank'] = (df.groupby('date')['dollar_volume'].rank(ascending=False))
     
     df = df[df['dollar_vol_rank'] < 150].drop(['dollar_volume', 'dollar_vol_rank'], axis = 1)
 
@@ -122,6 +122,7 @@ def calc_RFB(df):
     observations = factor_data.groupby(level = 1).size()
 
     valid_stocks = observations[observations >= 10]
+    
     if valid_stocks.empty:
         raise ValueError("No valid stocks found with >= 10 observations.")
 
@@ -142,16 +143,15 @@ def calc_RFB(df):
     df = df.drop('adj close', axis = 1)
 
     df = df.dropna()        
-
     return df
 
 def get_clusters(df):
 
-    HYP_K = 3       #The hyperparameter k that I  have chosen is 3.
+    HYP_K = 4       #The hyperparameter k that I  have chosen is 4.
 
     from sklearn.cluster import KMeans
 
-    target_rsi_values = [30, 50, 70]
+    target_rsi_values = [30, 45, 55, 70]
 
     initial_centroids = np.zeros((len(target_rsi_values), 18))
 
@@ -170,12 +170,12 @@ def plot_clusters(prep_df):
     cluster_0 = prep_df[prep_df['cluster'] == 0]
     cluster_1 = prep_df[prep_df['cluster'] == 1]
     cluster_2 = prep_df[prep_df['cluster'] == 2]
-    #cluster_3 = prep_df[prep_df['cluster'] == 3]
+    cluster_3 = prep_df[prep_df['cluster'] == 3]
 
     plt.scatter(cluster_0.iloc[:,0], cluster_0.iloc[:,6], color = 'red', label = 'cluster 0')
     plt.scatter(cluster_1.iloc[:,0], cluster_1.iloc[:,6], color = 'green', label = 'cluster 1')
     plt.scatter(cluster_2.iloc[:,0], cluster_2.iloc[:,6], color = 'black', label = 'cluster 2')
-    #plt.scatter(cluster_3.iloc[:,0], cluster_3.iloc[:,6], color = 'pink', label = 'cluster 3')
+    plt.scatter(cluster_3.iloc[:,0], cluster_3.iloc[:,6], color = 'pink', label = 'cluster 3')
 
     plt.legend()
     plt.show()
@@ -194,11 +194,11 @@ def plots(df):
 
 def select_assets(df):
     """
-    This function selects assets based on the cluster and forms a
-    portfolio based on Efficient Frontier max sharpe  ratio optimization
+    This function selects assets based on the cluster
     
     Return: fixed dates
     """
+
     filtered_df = df[df['cluster'] == 1].copy()
 
     filtered_df = filtered_df.reset_index(level = 1)
@@ -247,7 +247,7 @@ def get_prices(df):
 
     return new_df
 
-def calc_returns(new_df, fixed_dates):
+def calc_returns(new_df, fixed_dates, algo_start_date):
 
     returns_dataframe = np.log(new_df['Adj Close']).diff()
 
@@ -310,14 +310,13 @@ def calc_returns(new_df, fixed_dates):
 
     portfolio_dataframe = portfolio_dataframe.drop_duplicates()
 
-    #portfolio_dataframe.plot()
-    #plt.show()
-    spy = yf.download(tickers= 'SPY', start = optimization_start_date, end= dt.date.today()).reset_index().set_index(['Date'])
+    spy = yf.download(tickers= 'SPY', start = algo_start_date, end= dt.date.today()).reset_index().set_index(['Date'])
     spy.columns = spy.columns.droplevel(1)
-    print(spy.info())
     spy = spy[['Adj Close']]
-    print(spy.head())
+
     spy_ret = np.log(spy).diff().dropna().rename({'Adj Close' : 'SPY Buy & Hold'}, axis = 1)
+
+    spy_ret = spy_ret[['SPY Buy & Hold']]
     
     print(f'Portfolio DF: \n{portfolio_dataframe}')
     print(f'SPY Ret DF: \n{spy_ret}')
@@ -328,16 +327,22 @@ def calc_returns(new_df, fixed_dates):
 
 
 def plot_returns(portfolio_dataframe):
+
+    import matplotlib.ticker as mtick
+
     plt.style.use('ggplot')
+
     portfolio_cumulative_return = np.exp(np.log1p(portfolio_dataframe).cumsum()) - 1
 
-    portfolio_cumulative_return[:].plot(figsize=(16,6))
+    portfolio_cumulative_return[:'2024-12-10'].plot(figsize=(16,6))
 
     plt.title('Unsupervised Learning Trading Strategy Returns Over Time')
 
+    plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter(1))
+
+    plt.ylabel('Return')
+
     plt.show()
-
-
 
      
 
@@ -348,11 +353,11 @@ data = get_liquid_stocks(data)
 data = get_monthly_returns(data)
 data = calc_RFB(data)
 data = compute_Clusters(data)
-plots(data)
+#plots(data)
 fixed_dates = select_assets(data)
 new_df = get_prices(data)
 
-returns = calc_returns(new_df, fixed_dates)
+returns = calc_returns(new_df, fixed_dates, '2016-12-10')
 plot_returns(returns)
 
 
