@@ -20,7 +20,7 @@ def get_Data(url):
 
     end_date = '2024-12-10'
 
-    start_date = pd.to_datetime(end_date) - pd.DateOffset(365*8)    #Set the start date to 8 years before end date
+    start_date = pd.to_datetime(end_date) - pd.DateOffset(365*12)    #Set the start date to 6 years before end date
 
     df = yf.download(tickers = symbols_list, start = start_date, end = end_date).stack()
 
@@ -147,7 +147,7 @@ def calc_RFB(df):
 
 def get_clusters(df):
 
-    HYP_K = 4       #The hyperparameter k that I  have chosen is 4.
+    HYP_K = 4      #The hyperparameter k that I  have chosen is 4.
 
     from sklearn.cluster import KMeans
 
@@ -218,7 +218,7 @@ def select_assets(df):
     return fixed_dates
 
 
-def optimize_weights(prices, lower_bound, upper_bound = .1):
+def optimize_weights(prices, lower_bound, upper_bound = .15):
     from pypfopt.efficient_frontier import EfficientFrontier
     from pypfopt import risk_models
     from pypfopt import expected_returns
@@ -317,9 +317,6 @@ def calc_returns(new_df, fixed_dates, algo_start_date):
     spy_ret = np.log(spy).diff().dropna().rename({'Adj Close' : 'SPY Buy & Hold'}, axis = 1)
 
     spy_ret = spy_ret[['SPY Buy & Hold']]
-    
-    print(f'Portfolio DF: \n{portfolio_dataframe}')
-    print(f'SPY Ret DF: \n{spy_ret}')
 
     portfolio_dataframe = portfolio_dataframe.merge(spy_ret, left_index= True, right_index= True)
 
@@ -334,7 +331,7 @@ def plot_returns(portfolio_dataframe):
 
     portfolio_cumulative_return = np.exp(np.log1p(portfolio_dataframe).cumsum()) - 1
 
-    portfolio_cumulative_return[:'2024-12-10'].plot(figsize=(16,6))
+    portfolio_cumulative_return[:].plot(figsize=(16,6))
 
     plt.title('Unsupervised Learning Trading Strategy Returns Over Time')
 
@@ -357,7 +354,7 @@ data = compute_Clusters(data)
 fixed_dates = select_assets(data)
 new_df = get_prices(data)
 
-returns = calc_returns(new_df, fixed_dates, '2016-12-10')
+returns = calc_returns(new_df, fixed_dates, '2011-12-10')
 plot_returns(returns)
 
 
